@@ -1,0 +1,21 @@
+# Virtuelle Umgebung ignorieren
+venv/
+
+# Thumbnail-Cache ignorieren
+.thumbcache/
+
+# JSON-Konfigurations- und Laufzeitdateien ignorieren
+*.json
+
+# Bytecode-Dateien
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE-spezifische Dateien (für z. B. IntelliJ / PyCharm)
+.idea/
+*.iml
+
+# macOS-Systemdateien
+.DS_Store
