@@ -88,11 +88,27 @@ class ControlWindow(QWidget):
         self.ignore_range_checkbox = QCheckBox("Zeitbereich ignorieren")
         self.ignore_range_checkbox.setChecked(False)
 
-        self.tag_input = QLineEdit()
-        self.tag_input.setPlaceholderText("Schlagwörter (mit Leerzeichen)")
-
         self.tag_save_button = QPushButton("Schlagwörter übernehmen")
         self.tag_save_button.clicked.connect(self.set_tags_for_current_media)
+
+        from PyQt5.QtWidgets import QComboBox
+
+        self.tag_input = QLineEdit()
+
+        self.tag_combobox = QComboBox()
+        self.tag_combobox.setEditable(True)
+        self.tag_combobox.setInsertPolicy(QComboBox.NoInsert)
+        self.tag_combobox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.tag_combobox.setPlaceholderText("Tag auswählen oder neu eingeben…")
+        self.tag_combobox.lineEdit().returnPressed.connect(self.add_tag_from_combobox)
+        self.tag_combobox.activated.connect(lambda _: self.add_tag_from_combobox())
+
+        self.tag_container_widget = QWidget()
+        self.tag_container_layout = QVBoxLayout()
+        self.tag_container_layout.setContentsMargins(0, 0, 0, 0)
+        self.tag_container_widget.setLayout(self.tag_container_layout)
+        self.tag_container_layout.addWidget(self.tag_input)
+        self.tag_container_layout.addWidget(self.tag_combobox)
 
 
         self.progress_bar = QProgressBar()
@@ -141,12 +157,10 @@ class ControlWindow(QWidget):
 
 
 
+        # Definition und Aufbau von button_layout
         button_layout = QVBoxLayout()
-
         button_layout.insertWidget(0, self.choose_folder_button)
-
         button_layout.addLayout(slideshow_controls)
-
         # button_layout.addWidget(self.next_button)
         button_layout.addWidget(self.playpause_button)
         button_layout.addWidget(self.fullscreen_button)
@@ -157,7 +171,6 @@ class ControlWindow(QWidget):
         time_range_layout.addWidget(self.end_input)
         time_range_layout.addWidget(self.ignore_range_checkbox)
         button_layout.addLayout(time_range_layout)
-
         button_layout.addWidget(self.range_button)
         button_layout.addWidget(self.progress_bar)
         slider_layout = QHBoxLayout()
@@ -167,20 +180,16 @@ class ControlWindow(QWidget):
         button_layout.addWidget(QLabel("Lautstärke"))
         button_layout.addWidget(self.volume_slider)
         button_layout.addWidget(self.ignore_range_checkbox)
-
-        button_layout.addWidget(self.tag_input)
+        button_layout.addWidget(QLabel("Tags für Datei"))
+        button_layout.addWidget(self.tag_container_widget)
         button_layout.addWidget(self.tag_save_button)
-
         button_layout.addWidget(self.cleanup_button)
         button_layout.addWidget(self.tag_checkbox_scroll)
-
         button_layout.addWidget(self.thumbnail_progress_label)
-
-        # button_layout.addStretch()
 
         button_widget = QWidget()
         button_widget.setLayout(button_layout)
-        MAX_WIDTH=280;
+        MAX_WIDTH = 280
         button_widget.setMinimumWidth(MAX_WIDTH)
         button_widget.setMaximumWidth(MAX_WIDTH)
 
@@ -199,6 +208,7 @@ class ControlWindow(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.check_video_range)
         self.timer.start(300)
+    # Entfernte Methoden: add_tag_from_input, refresh_tag_chips, remove_tag, show_tag_suggestions, insert_tag_to_input
 
     def load_and_update_tags(self):
         self.media_tags = self.load_media_tags()
@@ -365,6 +375,9 @@ class ControlWindow(QWidget):
             checkbox.stateChanged.connect(self.apply_tag_filter)
             self.tag_checkbox_layout.addWidget(checkbox)
             self.tag_checkboxes[tag] = checkbox
+        if hasattr(self, 'tag_combobox'):
+            self.tag_combobox.clear()
+            self.tag_combobox.addItems(sorted(tag_counter.keys()))
 
     def apply_tag_filter(self):
         selected_tags = [tag for tag, cb in self.tag_checkboxes.items() if cb.isChecked()]
@@ -615,6 +628,8 @@ class ControlWindow(QWidget):
 
         tags = self.media_tags.get(path, "")
         self.tag_input.setText(tags)
+        if hasattr(self, 'tag_combobox'):
+            self.tag_combobox.setCurrentText("")
 
     def replace_thumbnail(self, path, image_or_frames):
 
@@ -711,3 +726,28 @@ class ControlWindow(QWidget):
         if duration > 0:
             seconds = duration * value / 1000 / 1000
             self.video_time_label.setText(f"{seconds:.1f} s")
+
+
+
+    # Neue Methode für Tagging mit QComboBox
+    def add_tag_from_combobox(self):
+        tag = self.tag_combobox.currentText().strip().lower()
+        if not tag:
+            return
+
+        path = self.display_window.current_media_path
+        if not path:
+            return
+
+        tags_str = self.media_tags.get(path, "")
+        current_tags = tags_str.strip().split()
+        if tag in current_tags:
+            self.tag_combobox.setCurrentText("")
+            return
+
+        current_tags.append(tag)
+        self.media_tags[path] = " ".join(current_tags)
+        self.save_media_tags()
+        self.tag_input.setText(" ".join(current_tags))
+        self.tag_combobox.setCurrentText("")
+        print(f"Tag hinzugefügt für {os.path.basename(path)}: {tag}")
