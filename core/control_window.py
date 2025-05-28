@@ -6,7 +6,7 @@ import random
 from PyQt5.QtCore import QTimer, Qt, QThreadPool
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtWidgets import QHBoxLayout, QSplitter, QFileDialog, QScrollArea, QWidget, QSlider, QGridLayout, QLineEdit, \
-    QLabel, QProgressBar, QPushButton, QCheckBox, QGroupBox, QVBoxLayout, QSizePolicy, QApplication, QMessageBox
+    QLabel, QProgressBar, QPushButton, QCheckBox, QGroupBox, QVBoxLayout, QHBoxLayout, QSizePolicy, QApplication, QMessageBox
 
 from core.common import ThumbnailSignal, CachedThumbnailLoaderImage, FRAMES_PER_THUMBNAIL, THUMBNAIL_DELAY, \
     THUMBNAIL_LOAD_THREAD_COUNT
@@ -64,6 +64,9 @@ class ControlWindow(QWidget):
         self.cleanup_button = QPushButton("Titel bereinigen")
         self.cleanup_button.clicked.connect(self.cleanup_duplicates)
 
+        self.show_untagged_button = QPushButton("Untagged anzeigen")
+        self.show_untagged_button.clicked.connect(self.show_untagged_media)
+
         self.tag_checkbox_group = QGroupBox("Verfügbare Schlagwörter")
         self.tag_checkbox_layout = QVBoxLayout()
         self.tag_checkbox_group.setLayout(self.tag_checkbox_layout)
@@ -94,6 +97,7 @@ class ControlWindow(QWidget):
         from PyQt5.QtWidgets import QComboBox
 
         self.tag_input = QLineEdit()
+        self.untagged_count_label = QLabel("0")
 
         self.tag_combobox = QComboBox()
         self.tag_combobox.setEditable(True)
@@ -180,6 +184,14 @@ class ControlWindow(QWidget):
         button_layout.addWidget(QLabel("Lautstärke"))
         button_layout.addWidget(self.volume_slider)
         button_layout.addWidget(self.ignore_range_checkbox)
+        untagged_layout = QHBoxLayout()
+        untagged_layout.addWidget(self.show_untagged_button)
+        untagged_layout.addWidget(self.untagged_count_label)
+
+        untagged_widget = QWidget()
+        untagged_widget.setLayout(untagged_layout)
+
+        button_layout.addWidget(untagged_widget)
         button_layout.addWidget(QLabel("Tags für Datei"))
         button_layout.addWidget(self.tag_container_widget)
         button_layout.addWidget(self.tag_save_button)
@@ -208,7 +220,27 @@ class ControlWindow(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.check_video_range)
         self.timer.start(300)
+        QTimer.singleShot(100, self.load_and_filter_untagged_on_start)
     # Entfernte Methoden: add_tag_from_input, refresh_tag_chips, remove_tag, show_tag_suggestions, insert_tag_to_input
+
+    def load_and_filter_untagged_on_start(self):
+        self.load_media_files()
+        self.media_tags = self.load_media_tags()
+        self.update_tag_checkboxes()
+        self.filter_untagged_media()
+
+    def filter_untagged_media(self):
+        untagged_files = [path for path in self.display_window.media_files if not self.media_tags.get(path, "").strip()]
+        self.filtered_files = untagged_files
+        self.populate_thumbnails(self.filtered_files)
+    def update_untagged_count(self):
+        count = sum(1 for path in self.display_window.media_files if not self.media_tags.get(path, "").strip())
+        self.untagged_count_label.setText(f"({count})")
+
+    def show_untagged_media(self):
+        untagged = [path for path in self.display_window.media_files if not self.media_tags.get(path)]
+        self.filtered_files = untagged
+        self.populate_thumbnails(self.filtered_files)
 
     def load_and_update_tags(self):
         self.media_tags = self.load_media_tags()
@@ -412,6 +444,7 @@ class ControlWindow(QWidget):
             with open(temp_path, "w") as f:
                 json.dump(self.media_tags, f, indent=2)
             shutil.move(temp_path, "media_tags.json")
+            self.update_untagged_count()
         except Exception as e:
             print(f"Fehler beim sicheren Speichern der Tags: {e}")
 
@@ -423,6 +456,7 @@ class ControlWindow(QWidget):
         self.media_tags[path] = tags
         self.save_media_tags()
         self.update_tag_checkboxes()
+        self.update_untagged_count()
         print(f"Tags für {os.path.basename(path)} gesetzt: {tags}")
 
     def cleanup_duplicates(self):
@@ -562,6 +596,7 @@ class ControlWindow(QWidget):
         self.populate_thumbnails()
         self.media_tags = self.load_media_tags()
         self.update_tag_checkboxes()
+        self.update_untagged_count()
 
     def populate_thumbnails(self, files=None):
         if files is None:
