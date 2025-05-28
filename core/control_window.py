@@ -337,9 +337,14 @@ class ControlWindow(QWidget):
     def update_tag_checkboxes(self):
         from collections import Counter
 
-        # Entferne Tags für Dateien, die nicht mehr existieren
-        existing_files = set(self.display_window.media_files)
-        self.media_tags = {path: tags for path, tags in self.media_tags.items() if path in existing_files}
+        # Aktuelle Mediendateien
+        current_files = set(self.display_window.media_files)
+
+        # Filtere Tags nur für aktuelle Dateien, aber behalte alle Tags dauerhaft
+        full_tags = self.media_tags
+        filtered_tags = {path: tags for path, tags in full_tags.items() if path in current_files}
+        self.filtered_media_tags = filtered_tags
+        self.media_tags = full_tags  # alle Tags bleiben erhalten
         self.save_media_tags()  # Optional: speichert sofort die bereinigte Datei
 
         # Alte Checkboxen entfernen
@@ -348,9 +353,9 @@ class ControlWindow(QWidget):
             if widget:
                 widget.setParent(None)
 
-        # Neue Checkboxen basierend auf vorhandenen Tags
+        # Neue Checkboxen basierend auf vorhandenen Tags der aktuellen Dateien
         tag_counter = Counter()
-        for tags_str in self.media_tags.values():
+        for tags_str in self.filtered_media_tags.values():
             tag_list = tags_str.strip().lower().split()
             tag_counter.update(tag_list)
 
@@ -386,8 +391,16 @@ class ControlWindow(QWidget):
         return {}
 
     def save_media_tags(self):
-        with open("media_tags.json", "w") as f:
-            json.dump(self.media_tags, f, indent=2)
+        import tempfile
+        import shutil
+
+        temp_path = "media_tags.json.tmp"
+        try:
+            with open(temp_path, "w") as f:
+                json.dump(self.media_tags, f, indent=2)
+            shutil.move(temp_path, "media_tags.json")
+        except Exception as e:
+            print(f"Fehler beim sicheren Speichern der Tags: {e}")
 
     def set_tags_for_current_media(self):
         path = self.display_window.current_media_path
