@@ -422,6 +422,7 @@ class ControlWindow(QWidget):
         tags = self.tag_input.text().strip()
         self.media_tags[path] = tags
         self.save_media_tags()
+        self.update_tag_checkboxes()
         print(f"Tags für {os.path.basename(path)} gesetzt: {tags}")
 
     def cleanup_duplicates(self):
@@ -743,6 +744,7 @@ class ControlWindow(QWidget):
         current_tags = tags_str.strip().split()
         if tag in current_tags:
             self.tag_combobox.setCurrentText("")
+            self.update_tag_checkboxes()
             return
 
         current_tags.append(tag)
