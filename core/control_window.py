@@ -355,7 +355,7 @@ class ControlWindow(QWidget):
             candidates = self.slideshow_media_files  # Fallback, wenn nur ein Element vorhanden
 
         path = random.choice(candidates)
-        self.display_window.show_specific_media(path)
+        self.display_window.show_specific_media(path, self.slideshow_duration)
 
         bounds = self.video_ranges.get(path, {})
         start_sec = bounds.get("start", 0)
@@ -703,7 +703,7 @@ class ControlWindow(QWidget):
         self.active_thumbnail_widget = widget
 
         # Restliche Aktionen
-        self.display_window.show_specific_media(path)
+        self.display_window.show_specific_media(path, 0)
         self.update_range_fields(path)
         self.update_volume_slider(path)
 

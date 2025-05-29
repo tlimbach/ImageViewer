@@ -20,18 +20,25 @@ class LeftBar(QWidget):
         self.hide()
 
     def start(self):
-        self.start_time = QTime.currentTime()
-        self.timer.start(30)
-        self.setGeometry(0, 0, 10, self.parent().height())
-        self.show()
+        if self.duration>0:
+            self.start_time = QTime.currentTime()
+            self.timer.start(30)
+            self.setGeometry(0, 0, 10, self.parent().height())
+            self.show()
 
     def stop(self):
         self.timer.stop()
         self.hide()
 
     def paintEvent(self, event):
+
         if not self.start_time:
             return
+
+        if self.duration == 0:
+            return
+
+
         elapsed = self.start_time.msecsTo(QTime.currentTime())
         fraction = min(1.0, elapsed / self.duration)
         height = self.height() * (1.0 - fraction)
@@ -124,9 +131,11 @@ class DisplayWindow(QWidget):
         while len(self.media_files) > 1 and media_path == self.current_media_path:
             media_path = random.choice(self.media_files)
 
-        self.show_specific_media(media_path)
+        self.show_specific_media(media_path, 0)
 
-    def show_specific_media(self, media_path):
+    def show_specific_media(self, media_path, seconds):
+
+        print(f"is diashow ? {seconds}")
         self.current_media_path = media_path
 
         if media_path.lower().endswith(self.supported_images):
@@ -146,6 +155,8 @@ class DisplayWindow(QWidget):
                 self.media_player.setPosition(int(bounds["start"] * 1000))
             self.media_player.play()
             self.stacked_layout.setCurrentIndex(1)
+
+            self.left_bar.duration= seconds * 1000
             self.left_bar.start()
 
     def handle_media_status(self, status):
