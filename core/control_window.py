@@ -345,6 +345,10 @@ class ControlWindow(QWidget):
         if not self.slideshow_running:
             return
 
+        if self.loaded_thumbnail_count < self.total_thumbnail_count:
+            QMessageBox.warning(self, "Bitte warten", "Die Medienvorschau wird noch geladen.")
+            return
+
         if not hasattr(self, 'slideshow_media_files') or not self.slideshow_media_files:
             return
 
