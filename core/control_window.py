@@ -719,8 +719,21 @@ class ControlWindow(QWidget):
         self.tag_dialog.setMinimumWidth(250)
         self.tag_dialog.path = path
 
-        layout = QVBoxLayout()
-        self.tag_dialog.setLayout(layout)
+        from PyQt5.QtWidgets import QScrollArea
+
+        self.tag_dialog.setFixedHeight(700)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout()
+        scroll_widget.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_widget)
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(scroll_area)
+        self.tag_dialog.setLayout(main_layout)
 
         self.tag_dialog.checkboxes = {}
 
@@ -729,15 +742,15 @@ class ControlWindow(QWidget):
         for tag in sorted(self.tag_checkboxes.keys()):
             cb = QCheckBox(tag)
             cb.setChecked(tag in existing_tags)
-            layout.addWidget(cb)
+            scroll_layout.addWidget(cb)
             self.tag_dialog.checkboxes[tag] = cb
 
         self.tag_dialog.new_tag_input = QLineEdit()
         self.tag_dialog.new_tag_input.setPlaceholderText("Neues Schlagwort hinzufügen")
-        layout.addWidget(self.tag_dialog.new_tag_input)
+        scroll_layout.addWidget(self.tag_dialog.new_tag_input)
 
         save_button = QPushButton("Speichern")
-        layout.addWidget(save_button)
+        scroll_layout.addWidget(save_button)
 
 
 
