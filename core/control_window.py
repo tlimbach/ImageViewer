@@ -701,12 +701,6 @@ class ControlWindow(QWidget):
         if self.auto_open_tags_checkbox.isChecked():
             self.show_or_update_tag_dialog(path)
 
-    from PyQt5.QtWidgets import (
-        QDialog, QVBoxLayout, QCheckBox, QLineEdit, QPushButton, QScrollArea, QWidget,
-        QCompleter
-    )
-    from PyQt5.QtCore import Qt, QStringListModel
-
     def show_or_update_tag_dialog(self, path):
         if self.tag_dialog and self.tag_dialog.isVisible():
             self.tag_dialog.path = path
@@ -720,20 +714,17 @@ class ControlWindow(QWidget):
         self.tag_dialog.setFixedHeight(700)
         self.tag_dialog.path = path
 
+        main_layout = QVBoxLayout(self.tag_dialog)
+
+        # Scrollbarer Bereich für die Checkboxen
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)
-
         scroll_area.setWidget(scroll_widget)
-
-        main_layout = QVBoxLayout()
         main_layout.addWidget(scroll_area)
-        self.tag_dialog.setLayout(main_layout)
 
         self.tag_dialog.checkboxes = {}
-
         existing_tags = self.media_tags.get(path, "").strip().lower().split()
 
         for tag in sorted(self.tag_checkboxes.keys()):
@@ -742,14 +733,26 @@ class ControlWindow(QWidget):
             scroll_layout.addWidget(cb)
             self.tag_dialog.checkboxes[tag] = cb
 
+        # Eingabefeld für neues Schlagwort
+        # Fester unterer Bereich mit Eingabefeld und Speichern-Button
         self.tag_dialog.new_tag_input = QLineEdit()
         self.tag_dialog.new_tag_input.setPlaceholderText("Neues Schlagwort hinzufügen")
-        scroll_layout.addWidget(self.tag_dialog.new_tag_input)
 
-        completer_model = QStringListModel(list(self.tag_checkboxes.keys()))
         completer = SubstringCompleter(list(self.tag_checkboxes.keys()), self.tag_dialog)
         self.tag_dialog.new_tag_input.setCompleter(completer)
 
+        bottom_box = QWidget()
+        bottom_layout = QVBoxLayout()
+        bottom_layout.setContentsMargins(0, 0, 0, 0)
+        bottom_box.setLayout(bottom_layout)
+
+        bottom_layout.addWidget(self.tag_dialog.new_tag_input)
+
+        save_button = QPushButton("Speichern")
+        bottom_layout.addWidget(save_button)
+        main_layout.addWidget(bottom_box)  # Wird außerhalb des Scrollbereichs hinzugefügt
+
+        # 🧠 Logik für Filterung beim Tippen
         def filter_checkboxes():
             text = self.tag_dialog.new_tag_input.text().strip().lower()
             for tag, cb in self.tag_dialog.checkboxes.items():
@@ -757,9 +760,7 @@ class ControlWindow(QWidget):
 
         self.tag_dialog.new_tag_input.textChanged.connect(filter_checkboxes)
 
-        save_button = QPushButton("Speichern")
-        scroll_layout.addWidget(save_button)
-
+        # ✅ Logik für den festen Speicher-Button (aus dem Scrollbereich entfernt)
         def save_tags():
             selected = [tag for tag, cb in self.tag_dialog.checkboxes.items() if cb.isChecked()]
             typed = self.tag_dialog.new_tag_input.text().strip().lower()
@@ -769,6 +770,7 @@ class ControlWindow(QWidget):
             self.save_media_tags()
             self.update_tag_checkboxes()
             self.update_untagged_count()
+            # self.tag_dialog.accept()
 
         save_button.clicked.connect(save_tags)
 
@@ -782,7 +784,7 @@ class ControlWindow(QWidget):
         for tag, cb in self.tag_dialog.checkboxes.items():
             cb.setChecked(tag in existing_tags)
 
-        self.tag_dialog.new_tag_input.clear()
+        # self.tag_dialog.new_tag_input.clear()
 
     def update_range_fields(self, path):
         bounds = self.video_ranges.get(path)
