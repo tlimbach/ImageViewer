@@ -7,13 +7,13 @@ from PyQt5.QtCore import QTimer, Qt, QThreadPool, QStringListModel
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtWidgets import QSplitter, QFileDialog, QScrollArea, QWidget, QSlider, QGridLayout, \
     QLabel, QProgressBar, QPushButton, QCheckBox, QGroupBox, QVBoxLayout, QHBoxLayout, QSizePolicy, QApplication, \
-    QMessageBox, QLineEdit, QCompleter, QListWidget, QListWidgetItem, QDialog
+    QMessageBox, QLineEdit, QListWidget, QListWidgetItem, QDialog
 
 from core.common import ThumbnailSignal, CachedThumbnailLoaderImage, FRAMES_PER_THUMBNAIL, THUMBNAIL_DELAY, \
     THUMBNAIL_LOAD_THREAD_COUNT
 from ui.video_thumbnail_loader import VideoThumbnailLoader
 from ui.video_thumbnail_widget import VideoThumbnailWidget
-
+from core.substring_completer import SubstringCompleter
 
 class ControlWindow(QWidget):
     def __init__(self, display_window):
@@ -96,9 +96,6 @@ class ControlWindow(QWidget):
         self.tag_list_widget = QListWidget()
         self.tag_list_widget.setSelectionMode(QListWidget.MultiSelection)
         self.tag_list_widget.setMaximumHeight(80)  # damit es nicht zu viel Platz wegnimmt
-
-        self.tag_completer = QCompleter()
-
 
         self.untagged_count_label = QLabel("0")
 
@@ -704,11 +701,14 @@ class ControlWindow(QWidget):
         if self.auto_open_tags_checkbox.isChecked():
             self.show_or_update_tag_dialog(path)
 
-    def show_or_update_tag_dialog(self, path):
-        from PyQt5.QtWidgets import QVBoxLayout
+    from PyQt5.QtWidgets import (
+        QDialog, QVBoxLayout, QCheckBox, QLineEdit, QPushButton, QScrollArea, QWidget,
+        QCompleter
+    )
+    from PyQt5.QtCore import Qt, QStringListModel
 
+    def show_or_update_tag_dialog(self, path):
         if self.tag_dialog and self.tag_dialog.isVisible():
-            # Aktualisieren statt neu erstellen
             self.tag_dialog.path = path
             self.update_existing_tag_dialog()
             return
@@ -717,18 +717,15 @@ class ControlWindow(QWidget):
         self.tag_dialog.setAttribute(Qt.WA_DeleteOnClose)
         self.tag_dialog.setWindowTitle("Schlagwörter zuweisen")
         self.tag_dialog.setMinimumWidth(250)
-        self.tag_dialog.path = path
-
-        from PyQt5.QtWidgets import QScrollArea
-
         self.tag_dialog.setFixedHeight(700)
+        self.tag_dialog.path = path
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
 
         scroll_widget = QWidget()
-        scroll_layout = QVBoxLayout()
-        scroll_widget.setLayout(scroll_layout)
+        scroll_layout = QVBoxLayout(scroll_widget)
+
         scroll_area.setWidget(scroll_widget)
 
         main_layout = QVBoxLayout()
@@ -749,10 +746,19 @@ class ControlWindow(QWidget):
         self.tag_dialog.new_tag_input.setPlaceholderText("Neues Schlagwort hinzufügen")
         scroll_layout.addWidget(self.tag_dialog.new_tag_input)
 
+        completer_model = QStringListModel(list(self.tag_checkboxes.keys()))
+        completer = SubstringCompleter(list(self.tag_checkboxes.keys()), self.tag_dialog)
+        self.tag_dialog.new_tag_input.setCompleter(completer)
+
+        def filter_checkboxes():
+            text = self.tag_dialog.new_tag_input.text().strip().lower()
+            for tag, cb in self.tag_dialog.checkboxes.items():
+                cb.setVisible(text in tag.lower() if text else True)
+
+        self.tag_dialog.new_tag_input.textChanged.connect(filter_checkboxes)
+
         save_button = QPushButton("Speichern")
         scroll_layout.addWidget(save_button)
-
-
 
         def save_tags():
             selected = [tag for tag, cb in self.tag_dialog.checkboxes.items() if cb.isChecked()]
