@@ -665,7 +665,7 @@ class ControlWindow(QWidget):
             placeholder = QLabel("Lade...")
             placeholder.setFixedWidth(self.thumbnail_size)
             placeholder.setAlignment(Qt.AlignCenter)
-            placeholder.mousePressEvent = lambda e, p=path: self.handle_thumbnail_click(p, w)
+            placeholder.mousePressEvent = lambda e, p=path, w = placeholder: self.handle_thumbnail_click(p, w)
             self.preview_layout.addWidget(placeholder, idx // col_count, idx % col_count)
             self.path_to_label[path] = placeholder
 

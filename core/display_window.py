@@ -1,11 +1,51 @@
-
-from PyQt5.QtCore import QUrl, Qt
-from PyQt5.QtGui import QKeySequence, QPixmap
+from PyQt5.QtCore import QUrl, Qt, QTimer, QTime
+from PyQt5.QtGui import QKeySequence, QPixmap, QColor, QPainter
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import QWidget, QLabel, QSizePolicy, QStackedLayout, QVBoxLayout, QShortcut, QApplication
 
 import random
+
+
+class LeftBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setStyleSheet("background: transparent;")
+        self.start_time = None
+        self.duration = 5000  # 5 Sekunden
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update)
+        self.hide()
+
+    def start(self):
+        self.start_time = QTime.currentTime()
+        self.timer.start(30)
+        self.setGeometry(0, 0, 10, self.parent().height())
+        self.show()
+
+    def stop(self):
+        self.timer.stop()
+        self.hide()
+
+    def paintEvent(self, event):
+        if not self.start_time:
+            return
+        elapsed = self.start_time.msecsTo(QTime.currentTime())
+        fraction = min(1.0, elapsed / self.duration)
+        height = self.height() * (1.0 - fraction)
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        color = QColor(255, 105, 180, 180)  # halbtransparent rosa
+        painter.setBrush(color)
+        painter.setPen(Qt.NoPen)
+        painter.drawRect(0, 0, self.width(), int(height))
+
+        if fraction >= 1.0:
+            self.stop()
+
 
 class DisplayWindow(QWidget):
     def __init__(self, media_folder):
@@ -53,11 +93,16 @@ class DisplayWindow(QWidget):
         layout.addLayout(self.stacked_layout)
         self.setLayout(layout)
 
+        self.left_bar = LeftBar(self)
+        self.left_bar.setGeometry(0, 0, 10, self.height())
+        self.left_bar.raise_()
+
         QShortcut(QKeySequence("F11"), self, activated=self.toggle_fullscreen)
 
-    def handle_player_error(self, error):
-        print("QMediaPlayer Fehlercode:", error)
-        print("Fehlermeldung:", self.media_player.errorString())
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.left_bar.setGeometry(0, 0, 10, self.height())
+        self.left_bar.raise_()
 
     def handle_player_error(self, error):
         print("QMediaPlayer Fehler:", error)
@@ -96,12 +141,12 @@ class DisplayWindow(QWidget):
             media = QMediaContent(QUrl.fromLocalFile(media_path))
             self.media_player.setMedia(media)
             self.media_player.setPosition(0)
-            # Falls Startzeit gesetzt ist, dort beginnen
             bounds = getattr(self, "video_ranges", {}).get(media_path)
             if bounds and "start" in bounds:
                 self.media_player.setPosition(int(bounds["start"] * 1000))
             self.media_player.play()
             self.stacked_layout.setCurrentIndex(1)
+            self.left_bar.start()
 
     def handle_media_status(self, status):
         if status == QMediaPlayer.EndOfMedia:
