@@ -21,6 +21,7 @@ class LeftBar(QWidget):
 
     def start(self):
         if self.duration>0:
+            self.raise_()
             self.start_time = QTime.currentTime()
             self.timer.start(30)
             self.setGeometry(0, 0, 10, self.parent().height())
@@ -145,6 +146,10 @@ class DisplayWindow(QWidget):
                 self.image_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.image_label.setPixmap(scaled_pixmap)
             self.stacked_layout.setCurrentIndex(0)
+
+            self.left_bar.duration = seconds * 1000
+            self.left_bar.start()
+
         else:
             self.image_label.clear()
             media = QMediaContent(QUrl.fromLocalFile(media_path))
