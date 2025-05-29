@@ -24,7 +24,7 @@ class LeftBar(QWidget):
             self.raise_()
             self.start_time = QTime.currentTime()
             self.timer.start(30)
-            self.setGeometry(0, 0, 10, self.parent().height())
+            self.setGeometry(0, 0, 5, self.parent().height())
             self.show()
 
     def stop(self):
@@ -46,10 +46,10 @@ class LeftBar(QWidget):
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        color = QColor(255, 105, 180, 180)  # halbtransparent rosa
+        color = QColor(255, 130, 230)
         painter.setBrush(color)
         painter.setPen(Qt.NoPen)
-        painter.drawRect(0, 0, self.width(), int(height))
+        painter.drawRect(0, self.height() - int(height), self.width(), int(height))
 
         if fraction >= 1.0:
             self.stop()
