@@ -21,6 +21,7 @@ class ControlWindow(QWidget):
         self.settings_path = "settings.json"
         self.display_window = display_window
 
+
         self.active_thumbnail_widget = None
         self.tag_dialog = None
 
@@ -138,6 +139,7 @@ class ControlWindow(QWidget):
         self.slideshow_duration_input.setFixedWidth(100)
 
         self.start_slideshow_button = QPushButton("Diashow starten")
+        self.start_slideshow_button.setEnabled(False)
         self.start_slideshow_button.clicked.connect(self.start_slideshow)
 
         self.stop_slideshow_button = QPushButton("Diashow stoppen")
@@ -855,6 +857,9 @@ class ControlWindow(QWidget):
         self.thumbnail_progress_label.setText(
             f"Thumbnails geladen: {self.loaded_thumbnail_count} / {self.total_thumbnail_count}"
         )
+
+        if self.loaded_thumbnail_count == self.total_thumbnail_count:
+            self.start_slideshow_button.setEnabled(True)
 
         # Speichern im Cache-Verzeichnis
         cache_files = self.get_cache_file_paths(path)
