@@ -21,6 +21,7 @@ class ControlWindow(QWidget):
         self.settings_path = "settings.json"
         self.display_window = display_window
 
+        self.active_thumbnail_widget = None
         self.tag_dialog = None
 
         # Letztes Verzeichnis laden
@@ -664,7 +665,7 @@ class ControlWindow(QWidget):
             placeholder = QLabel("Lade...")
             placeholder.setFixedWidth(self.thumbnail_size)
             placeholder.setAlignment(Qt.AlignCenter)
-            placeholder.mousePressEvent = lambda e, p=path: self.handle_thumbnail_click(p)
+            placeholder.mousePressEvent = lambda e, p=path: self.handle_thumbnail_click(p, w)
             self.preview_layout.addWidget(placeholder, idx // col_count, idx % col_count)
             self.path_to_label[path] = placeholder
 
@@ -692,8 +693,16 @@ class ControlWindow(QWidget):
 
             self.thread_pool.start(worker)
 
+    def handle_thumbnail_click(self, path, widget):
+        # Rahmen des vorherigen Widgets entfernen
+        if self.active_thumbnail_widget:
+            self.active_thumbnail_widget.setStyleSheet("")
 
-    def handle_thumbnail_click(self, path):
+        # Neuen Rahmen setzen
+        widget.setStyleSheet("border: 2px solid red;")
+        self.active_thumbnail_widget = widget
+
+        # Restliche Aktionen
         self.display_window.show_specific_media(path)
         self.update_range_fields(path)
         self.update_volume_slider(path)
@@ -825,7 +834,7 @@ class ControlWindow(QWidget):
             label.deleteLater()
 
             widget = VideoThumbnailWidget(frames, interval=THUMBNAIL_DELAY)
-            widget.mousePressEvent = lambda e, p=path: self.handle_thumbnail_click(p)
+            widget.mousePressEvent = lambda e, w=widget, p=path: self.handle_thumbnail_click(p, w)
             self.preview_layout.addWidget(widget, row, col)
             self.path_to_label[path] = widget
 
