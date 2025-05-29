@@ -139,7 +139,7 @@ class ControlWindow(QWidget):
         self.slideshow_duration_input.setFixedWidth(100)
 
         self.start_slideshow_button = QPushButton("Diashow starten")
-        self.start_slideshow_button.setEnabled(False)
+        self.start_slideshow_button.setEnabled(True)
         self.start_slideshow_button.clicked.connect(self.start_slideshow)
 
         self.stop_slideshow_button = QPushButton("Diashow stoppen")
