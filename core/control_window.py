@@ -354,7 +354,15 @@ class ControlWindow(QWidget):
         if not candidates:
             candidates = self.slideshow_media_files  # Fallback, wenn nur ein Element vorhanden
 
+        from collections import Counter
+        print(Counter(self.slideshow_media_files))
+
+        print(f"Anzahl Kandidaten: {len(candidates)}")
+
         path = random.choice(candidates)
+
+        print(f"path {path}")
+
         self.display_window.show_specific_media(path, self.slideshow_duration)
 
         bounds = self.video_ranges.get(path, {})
