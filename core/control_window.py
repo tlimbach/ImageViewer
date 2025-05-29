@@ -21,6 +21,8 @@ class ControlWindow(QWidget):
         self.settings_path = "settings.json"
         self.display_window = display_window
 
+        self.tag_dialog = None
+
         # Letztes Verzeichnis laden
         last_folder = self.load_last_folder()
         if last_folder and os.path.isdir(last_folder):
@@ -158,7 +160,11 @@ class ControlWindow(QWidget):
         button_layout.addWidget(self.playpause_button)
         button_layout.addWidget(self.fullscreen_button)
         # button_layout.addWidget(self.thumb_width_input)
-        button_layout.addWidget(self.delete_button)
+        delete_cleanup_layout = QHBoxLayout()
+        delete_cleanup_layout.addWidget(self.delete_button)
+        delete_cleanup_layout.addWidget(self.cleanup_button)
+
+        button_layout.addLayout(delete_cleanup_layout)
         time_range_layout = QHBoxLayout()
         time_range_layout.addWidget(self.start_input)
         time_range_layout.addWidget(self.end_input)
@@ -185,10 +191,16 @@ class ControlWindow(QWidget):
         untagged_widget.setLayout(untagged_layout)
         button_layout.addWidget(untagged_widget)
 
+        tags_row_layout = QHBoxLayout()
+        tags_row_layout.addWidget(self.open_tag_assignment_button)
 
-        button_layout.addWidget(self.open_tag_assignment_button)
+        self.auto_open_tags_checkbox = QCheckBox("automatisch öffnen")
+        self.auto_open_tags_checkbox.setChecked(True)
+        tags_row_layout.addWidget(self.auto_open_tags_checkbox)
 
-        button_layout.addWidget(self.cleanup_button)
+        button_layout.addLayout(tags_row_layout)
+
+
         button_layout.addWidget(self.tag_checkbox_scroll)
         button_layout.addWidget(self.thumbnail_progress_label)
 
@@ -688,6 +700,70 @@ class ControlWindow(QWidget):
         self.display_window.show_specific_media(path)
         self.update_range_fields(path)
         self.update_volume_slider(path)
+
+        if self.auto_open_tags_checkbox.isChecked():
+            self.show_or_update_tag_dialog(path)
+
+    def show_or_update_tag_dialog(self, path):
+        from PyQt5.QtWidgets import QVBoxLayout
+
+        if self.tag_dialog and self.tag_dialog.isVisible():
+            # Aktualisieren statt neu erstellen
+            self.tag_dialog.path = path
+            self.update_existing_tag_dialog()
+            return
+
+        self.tag_dialog = QDialog(self)
+        self.tag_dialog.setAttribute(Qt.WA_DeleteOnClose)
+        self.tag_dialog.setWindowTitle("Schlagwörter zuweisen")
+        self.tag_dialog.setMinimumWidth(250)
+        self.tag_dialog.path = path
+
+        layout = QVBoxLayout()
+        self.tag_dialog.setLayout(layout)
+
+        self.tag_dialog.checkboxes = {}
+
+        existing_tags = self.media_tags.get(path, "").strip().lower().split()
+
+        for tag in sorted(self.tag_checkboxes.keys()):
+            cb = QCheckBox(tag)
+            cb.setChecked(tag in existing_tags)
+            layout.addWidget(cb)
+            self.tag_dialog.checkboxes[tag] = cb
+
+        self.tag_dialog.new_tag_input = QLineEdit()
+        self.tag_dialog.new_tag_input.setPlaceholderText("Neues Schlagwort hinzufügen")
+        layout.addWidget(self.tag_dialog.new_tag_input)
+
+        save_button = QPushButton("Speichern")
+        layout.addWidget(save_button)
+
+
+
+        def save_tags():
+            selected = [tag for tag, cb in self.tag_dialog.checkboxes.items() if cb.isChecked()]
+            typed = self.tag_dialog.new_tag_input.text().strip().lower()
+            if typed:
+                selected.extend(t for t in typed.replace(",", " ").split() if t)
+            self.media_tags[self.tag_dialog.path] = " ".join(sorted(set(selected)))
+            self.save_media_tags()
+            self.update_tag_checkboxes()
+            self.update_untagged_count()
+
+        save_button.clicked.connect(save_tags)
+
+        self.tag_dialog.show()
+        self.tag_dialog.finished.connect(lambda: setattr(self, "tag_dialog", None))
+
+    def update_existing_tag_dialog(self):
+        path = self.tag_dialog.path
+        existing_tags = self.media_tags.get(path, "").strip().lower().split()
+
+        for tag, cb in self.tag_dialog.checkboxes.items():
+            cb.setChecked(tag in existing_tags)
+
+        self.tag_dialog.new_tag_input.clear()
 
     def update_range_fields(self, path):
         bounds = self.video_ranges.get(path)
