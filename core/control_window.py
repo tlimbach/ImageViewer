@@ -91,18 +91,12 @@ class ControlWindow(QWidget):
         self.ignore_range_checkbox = QCheckBox("Zeitbereich ignorieren")
         self.ignore_range_checkbox.setChecked(False)
 
-        self.tag_save_button = QPushButton("Schlagwörter übernehmen")
-        self.tag_save_button.clicked.connect(self.set_tags_for_current_media)
-
-        self.tag_input = QLineEdit()
-        self.tag_input.setPlaceholderText("Tags eingeben, getrennt durch Leerzeichen oder Komma")
-
         self.tag_list_widget = QListWidget()
         self.tag_list_widget.setSelectionMode(QListWidget.MultiSelection)
         self.tag_list_widget.setMaximumHeight(80)  # damit es nicht zu viel Platz wegnimmt
 
         self.tag_completer = QCompleter()
-        self.tag_input.setCompleter(self.tag_completer)
+
 
         self.untagged_count_label = QLabel("0")
 
@@ -191,17 +185,8 @@ class ControlWindow(QWidget):
         untagged_widget.setLayout(untagged_layout)
         button_layout.addWidget(untagged_widget)
 
-        tag_input_layout = QVBoxLayout()
-        tag_input_layout.addWidget(self.tag_input)
+
         button_layout.addWidget(self.open_tag_assignment_button)
-        # tag_input_layout.addWidget(self.tag_list_widget)
-
-        tag_section_layout = QHBoxLayout()
-        tag_section_layout.addLayout(tag_input_layout)
-        tag_section_layout.addWidget(self.tag_save_button)
-
-        button_layout.addLayout(tag_section_layout)
-        # button_layout.addWidget(self.open_tag_filter_button)
 
         button_layout.addWidget(self.cleanup_button)
         button_layout.addWidget(self.tag_checkbox_scroll)
@@ -230,8 +215,6 @@ class ControlWindow(QWidget):
         self.timer.start(300)
         QTimer.singleShot(100, self.load_and_filter_untagged_on_start)
 
-
-
     def open_tag_assignment_dialog(self):
         path = self.display_window.current_media_path
         if not path:
@@ -247,25 +230,35 @@ class ControlWindow(QWidget):
         # Vorhandene Tags
         existing_tags = self.media_tags.get(path, "").strip().lower().split()
 
+        # Checkboxen für alle bekannten Tags
         for tag in sorted(self.tag_checkboxes.keys()):
             cb = QCheckBox(tag)
             cb.setChecked(tag in existing_tags)
             checkboxes[tag] = cb
             layout.addWidget(cb)
 
+        # Eingabefeld für neue Tags
+        new_tag_input = QLineEdit()
+        new_tag_input.setPlaceholderText("Neues Schlagwort hinzufügen")
+        layout.addWidget(new_tag_input)
+
         save_button = QPushButton("Speichern")
         layout.addWidget(save_button)
 
         def save_tags():
             selected_tags = [tag for tag, cb in checkboxes.items() if cb.isChecked()]
-            self.media_tags[path] = " ".join(sorted(selected_tags))
+            typed_text = new_tag_input.text().strip().lower()
+            if typed_text:
+                new_tags = [t for t in typed_text.replace(",", " ").split() if t]
+                selected_tags.extend(new_tags)
+
+            self.media_tags[path] = " ".join(sorted(set(selected_tags)))
             self.save_media_tags()
             self.update_tag_checkboxes()
             self.update_untagged_count()
             dialog.accept()
 
         save_button.clicked.connect(save_tags)
-
         dialog.exec_()
 
 
@@ -502,25 +495,6 @@ class ControlWindow(QWidget):
         except Exception as e:
             print(f"Fehler beim sicheren Speichern der Tags: {e}")
 
-    def set_tags_for_current_media(self):
-        path = self.display_window.current_media_path
-        if not path:
-            return
-        input_text = self.tag_input.text().strip().lower()
-        typed_tags = set(t.strip() for t in input_text.replace(",", " ").split() if t.strip())
-        selected_items = self.tag_list_widget.selectedItems()
-        selected_tags = set(item.text().strip().lower() for item in selected_items)
-        new_tags = typed_tags.union(selected_tags)
-
-        existing_tags = set(self.media_tags.get(path, "").strip().lower().split())
-        all_tags = sorted(existing_tags.union(new_tags))
-
-        self.media_tags[path] = " ".join(all_tags)
-        self.save_media_tags()
-        self.update_tag_checkboxes()
-        self.update_untagged_count()
-        print(f"Tags für {os.path.basename(path)} gesetzt: {all_tags}")
-
     def cleanup_duplicates(self):
         from PyQt5.QtWidgets import QMessageBox
         folder = self.display_window.media_folder
@@ -725,7 +699,6 @@ class ControlWindow(QWidget):
             self.end_input.clear()
 
         tags = self.media_tags.get(path, "")
-        self.tag_input.setText(tags)
         if hasattr(self, 'tag_combobox'):
             self.tag_combobox.setCurrentText("")
 
