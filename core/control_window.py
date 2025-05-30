@@ -3,6 +3,7 @@ import json
 import os
 import random
 
+from PyQt5 import sip
 from PyQt5.QtCore import QTimer, Qt, QThreadPool, QStringListModel
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtWidgets import QSplitter, QFileDialog, QScrollArea, QWidget, QSlider, QGridLayout, \
@@ -335,6 +336,8 @@ class ControlWindow(QWidget):
 
             # Nur gefilterte Liste verwenden
             self.slideshow_media_files = list(getattr(self, 'filtered_files', self.display_window.media_files))
+            random.shuffle(self.slideshow_media_files)
+            self.slideshow_index = 0
             self.show_next_random_media()
         except ValueError:
             print("Ungültige Eingabe für Diashow-Dauer")
@@ -365,11 +368,20 @@ class ControlWindow(QWidget):
 
         print(f"Anzahl Kandidaten: {len(candidates)}")
 
-        path = random.choice(candidates)
+        if self.slideshow_index >= len(self.slideshow_media_files):
+            random.shuffle(self.slideshow_media_files)
+            self.slideshow_index = 0
 
-        print(f"path {path}")
-
+        path = self.slideshow_media_files[self.slideshow_index]
+        self.slideshow_index += 1
         self.display_window.show_specific_media(path, self.slideshow_duration)
+
+
+        # path = random.choice(candidates)
+        #
+        # print(f"path {path}")
+        #
+        # self.display_window.show_specific_media(path, self.slideshow_duration)
 
         bounds = self.video_ranges.get(path, {})
         start_sec = bounds.get("start", 0)
@@ -654,6 +666,7 @@ class ControlWindow(QWidget):
         self.display_window.media_files = media_files
         self.progress_bar.setVisible(False)
         self.populate_thumbnails()
+        self.slideshow_media_files = list(self.display_window.media_files)
         self.media_tags = self.load_media_tags()
         self.update_tag_checkboxes()
         self.update_untagged_count()
@@ -709,7 +722,7 @@ class ControlWindow(QWidget):
 
     def handle_thumbnail_click(self, path, widget):
         # Rahmen des vorherigen Widgets entfernen
-        if self.active_thumbnail_widget:
+        if self.active_thumbnail_widget is not None and not sip.isdeleted(self.active_thumbnail_widget):
             self.active_thumbnail_widget.setStyleSheet("")
 
         # Neuen Rahmen setzen
