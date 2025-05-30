@@ -57,6 +57,15 @@ class ControlWindow(QWidget):
         self.playpause_button = QPushButton("Play / Pause")
         self.playpause_button.clicked.connect(self.display_window.toggle_play_pause)
 
+        self.autostart_checkbox = QCheckBox("Autostart")
+        self.play_pause_autostart_layout = QHBoxLayout();
+        self.play_pause_autostart_layout.addWidget(self.playpause_button)
+        self.play_pause_autostart_layout.addWidget(self.autostart_checkbox)
+
+        self.play_pause_autostart_widget = QWidget()
+        self.play_pause_autostart_widget.setLayout(self.play_pause_autostart_layout)
+
+
         self.fullscreen_button = QPushButton("Vollbild umschalten")
         self.fullscreen_button.clicked.connect(self.display_window.toggle_fullscreen)
 
@@ -158,7 +167,7 @@ class ControlWindow(QWidget):
         button_layout = QVBoxLayout()
         button_layout.addWidget(self.choose_folder_button)
         button_layout.addLayout(slideshow_controls)
-        button_layout.addWidget(self.playpause_button)
+        button_layout.addWidget(self.play_pause_autostart_widget)
         button_layout.addWidget(self.fullscreen_button)
         # button_layout.addWidget(self.thumb_width_input)
         delete_cleanup_layout = QHBoxLayout()
@@ -689,7 +698,7 @@ class ControlWindow(QWidget):
 
         col_count = 3
         for idx, path in enumerate(files):
-            placeholder = QLabel("Lade...")
+            placeholder = QLabel("Lade...", self.preview_container)
             placeholder.setFixedWidth(self.thumbnail_size)
             placeholder.setAlignment(Qt.AlignCenter)
             placeholder.mousePressEvent = lambda e, p=path, w = placeholder: self.handle_thumbnail_click(p, w)
@@ -730,7 +739,8 @@ class ControlWindow(QWidget):
         self.active_thumbnail_widget = widget
 
         # Restliche Aktionen
-        self.display_window.show_specific_media(path, 0)
+        if self.autostart_checkbox.isChecked():
+            self.display_window.show_specific_media(path, 0)
         self.update_range_fields(path)
         self.update_volume_slider(path)
 
